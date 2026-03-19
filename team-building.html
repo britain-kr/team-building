@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>팀빌딩 대시보드</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #f0f2f8;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      padding: 36px 40px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 25% 60%, rgba(255,100,100,0.07) 0%, transparent 55%),
+                  radial-gradient(circle at 75% 30%, rgba(100,100,255,0.07) 0%, transparent 55%);
+      animation: shimmer 7s ease-in-out infinite alternate;
+    }
+    @keyframes shimmer {
+      0%   { transform: scale(1) rotate(0deg); }
+      100% { transform: scale(1.06) rotate(2deg); }
+    }
+    .header h1 {
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: #fff;
+      position: relative;
+    }
+    .header h1 span {
+      background: linear-gradient(90deg, #f7971e, #ffd200, #56ab2f, #00b4db, #a18cd1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p {
+      color: rgba(255,255,255,0.55);
+      margin-top: 8px;
+      font-size: 0.95rem;
+      position: relative;
+    }
+    .header-stats {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .stat-pill {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 30px;
+      padding: 7px 20px;
+      color: #fff;
+      font-size: 0.83rem;
+      backdrop-filter: blur(8px);
+    }
+    .stat-pill strong { font-weight: 700; }
+
+    /* ── TAB BAR ── */
+    .tab-wrapper {
+      background: #fff;
+      border-bottom: 1px solid #e8e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .tab-bar {
+      display: flex;
+      max-width: 900px;
+      margin: 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex: 1;
+      min-width: 130px;
+      padding: 16px 10px 14px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #999;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .tab-btn:hover { color: #555; background: #fafafa; }
+    .tab-btn .tab-icon { font-size: 1.3rem; }
+    .tab-btn .tab-label { font-size: 0.82rem; white-space: nowrap; }
+
+    /* active state per team */
+    .tab-btn.active.t1 { color: #4776e6; border-bottom-color: #4776e6; background: #f5f7ff; }
+    .tab-btn.active.t2 { color: #11998e; border-bottom-color: #11998e; background: #f0fff9; }
+    .tab-btn.active.t3 { color: #e8870a; border-bottom-color: #f7971e; background: #fff9ee; }
+    .tab-btn.active.t4 { color: #c0236e; border-bottom-color: #f953c6; background: #fff5fb; }
+    .tab-btn.active.t5 { color: #0083b0; border-bottom-color: #00b4db; background: #f0fbff; }
+
+    /* ── PANEL ── */
+    .panel-container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 36px 24px 60px;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── CARD ── */
+    .card {
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 8px 36px rgba(0,0,0,0.11);
+      background: #fff;
+    }
+    .card-top { height: 10px; }
+
+    /* Card hero */
+    .card-hero {
+      padding: 32px 32px 24px;
+    }
+    .team-badge {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .team-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.7rem;
+      flex-shrink: 0;
+    }
+    .team-name {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+    .team-fullname {
+      font-size: 0.8rem;
+      font-weight: 500;
+      opacity: 0.55;
+      margin-top: 2px;
+    }
+    .slogan-box {
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.55;
+    }
+    .slogan-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0.55;
+      margin-bottom: 5px;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: #f0f0f5;
+      margin: 0 32px;
+    }
+
+    /* Promises */
+    .section {
+      padding: 24px 32px;
+    }
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #bbb;
+      margin-bottom: 14px;
+    }
+    .promise-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .promise-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: #f8f9fb;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #2d2d2d;
+      line-height: 1.5;
+    }
+    .promise-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      color: #fff;
+      margin-top: 1px;
+    }
+
+    /* People */
+    .people-section {
+      padding: 0 32px 32px;
+    }
+    .leader-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+    }
+    .leader-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .leader-info .role-tag {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0.55;
+      margin-bottom: 3px;
+    }
+    .leader-info .leader-name {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #1a1a2e;
+    }
+    .members-title {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #bbb;
+      margin-bottom: 12px;
+    }
+    .members-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      padding: 7px 16px;
+      border-radius: 22px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: #f2f3f8;
+      color: #444;
+      transition: background 0.2s;
+    }
+
+    /* ── TEAM THEMES ── */
+    /* t1: blue-purple */
+    .t1 .card-top    { background: linear-gradient(90deg, #4776e6, #8e54e9); }
+    .t1 .team-name   { color: #4776e6; }
+    .t1 .team-icon   { background: linear-gradient(135deg, #4776e6, #8e54e9); }
+    .t1 .slogan-box  { background: linear-gradient(135deg, #eef1ff, #f3eeff); color: #4776e6; }
+    .t1 .promise-num { background: linear-gradient(135deg, #4776e6, #8e54e9); }
+    .t1 .leader-card { background: linear-gradient(135deg, #eef1ff, #f3eeff); }
+    .t1 .leader-avatar { background: linear-gradient(135deg, #4776e6, #8e54e9); }
+
+    /* t2: green-teal */
+    .t2 .card-top    { background: linear-gradient(90deg, #11998e, #38ef7d); }
+    .t2 .team-name   { color: #11998e; }
+    .t2 .team-icon   { background: linear-gradient(135deg, #11998e, #38ef7d); }
+    .t2 .slogan-box  { background: linear-gradient(135deg, #edfff7, #e8fff6); color: #0d857b; }
+    .t2 .promise-num { background: linear-gradient(135deg, #11998e, #38ef7d); }
+    .t2 .leader-card { background: linear-gradient(135deg, #edfff7, #e8fff6); }
+    .t2 .leader-avatar { background: linear-gradient(135deg, #11998e, #38ef7d); }
+
+    /* t3: orange-gold */
+    .t3 .card-top    { background: linear-gradient(90deg, #f7971e, #ffd200); }
+    .t3 .team-name   { color: #e8870a; }
+    .t3 .team-icon   { background: linear-gradient(135deg, #f7971e, #ffd200); }
+    .t3 .slogan-box  { background: linear-gradient(135deg, #fff8e8, #fffbe6); color: #c97500; }
+    .t3 .promise-num { background: linear-gradient(135deg, #f7971e, #ffd200); }
+    .t3 .leader-card { background: linear-gradient(135deg, #fff8e8, #fffbe6); }
+    .t3 .leader-avatar { background: linear-gradient(135deg, #f7971e, #ffd200); }
+
+    /* t4: pink-magenta */
+    .t4 .card-top    { background: linear-gradient(90deg, #f953c6, #b91d73); }
+    .t4 .team-name   { color: #c0236e; }
+    .t4 .team-icon   { background: linear-gradient(135deg, #f953c6, #b91d73); }
+    .t4 .slogan-box  { background: linear-gradient(135deg, #ffeef9, #ffeef5); color: #a81864; }
+    .t4 .promise-num { background: linear-gradient(135deg, #f953c6, #b91d73); }
+    .t4 .leader-card { background: linear-gradient(135deg, #ffeef9, #ffeef5); }
+    .t4 .leader-avatar { background: linear-gradient(135deg, #f953c6, #b91d73); }
+
+    /* t5: cyan-blue */
+    .t5 .card-top    { background: linear-gradient(90deg, #00b4db, #0083b0); }
+    .t5 .team-name   { color: #0083b0; }
+    .t5 .team-icon   { background: linear-gradient(135deg, #00b4db, #0083b0); }
+    .t5 .slogan-box  { background: linear-gradient(135deg, #e8f9ff, #e6f5ff); color: #006e94; }
+    .t5 .promise-num { background: linear-gradient(135deg, #00b4db, #0083b0); }
+    .t5 .leader-card { background: linear-gradient(135deg, #e8f9ff, #e6f5ff); }
+    .t5 .leader-avatar { background: linear-gradient(135deg, #00b4db, #0083b0); }
+
+    /* footer */
+    .footer {
+      text-align: center;
+      padding: 0 0 28px;
+      color: #ccc;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>🎯 <span>팀빌딩 대시보드</span></h1>
+  <p>디자인 방법론과 혁신 — 5개 팀 소개</p>
+  <div class="header-stats">
+    <div class="stat-pill">🏅 <strong>5</strong>&nbsp;팀</div>
+    <div class="stat-pill">👥 <strong>30</strong>&nbsp;명</div>
+    <div class="stat-pill">💬 <strong>15</strong>&nbsp;가지 약속</div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-wrapper">
+  <div class="tab-bar">
+    <button class="tab-btn t1 active" onclick="switchTab(0)">
+      <span class="tab-icon">🌀</span>
+      <span class="tab-label">6IX</span>
+    </button>
+    <button class="tab-btn t2" onclick="switchTab(1)">
+      <span class="tab-icon">🚩</span>
+      <span class="tab-label">깃발</span>
+    </button>
+    <button class="tab-btn t3" onclick="switchTab(2)">
+      <span class="tab-icon">✨</span>
+      <span class="tab-label">정화</span>
+    </button>
+    <button class="tab-btn t4" onclick="switchTab(3)">
+      <span class="tab-icon">🍡</span>
+      <span class="tab-label">두쫀쿠팀</span>
+    </button>
+    <button class="tab-btn t5" onclick="switchTab(4)">
+      <span class="tab-icon">⚡</span>
+      <span class="tab-label">아자스</span>
+    </button>
+  </div>
+</div>
+
+<!-- PANELS -->
+<div class="panel-container">
+
+  <!-- ── PANEL 1: 6IX ── -->
+  <div class="panel active" id="panel-0">
+    <div class="card t1">
+      <div class="card-top"></div>
+      <div class="card-hero">
+        <div class="team-badge">
+          <div class="team-icon">🌀</div>
+          <div>
+            <div class="team-name">6IX</div>
+            <div class="team-fullname">6 - Interaction - eXperience</div>
+          </div>
+        </div>
+        <div class="slogan-box">
+          <div class="slogan-label">팀 슬로건</div>
+          6명이 상호작용(Interaction)을 통해 새로운 경험(eXperience)을 만든다
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section">
+        <div class="section-title">⚡ 우리 팀의 세 가지 약속</div>
+        <div class="promise-list">
+          <div class="promise-item"><span class="promise-num">1</span>바로 연락 확인하기</div>
+          <div class="promise-item"><span class="promise-num">2</span>명확하게 피드백 전달하기</div>
+          <div class="promise-item"><span class="promise-num">3</span>적극적으로 참여하기</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="people-section">
+        <br>
+        <div class="leader-card">
+          <div class="leader-avatar">👑</div>
+          <div class="leader-info">
+            <div class="role-tag">리더</div>
+            <div class="leader-name">김승현</div>
+          </div>
+        </div>
+        <div class="members-title">👋 팀 멤버</div>
+        <div class="members-grid">
+          <span class="chip">김서현</span>
+          <span class="chip">신채이</span>
+          <span class="chip">최가영</span>
+          <span class="chip">홍윤아</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL 2: 깃발 ── -->
+  <div class="panel" id="panel-1">
+    <div class="card t2">
+      <div class="card-top"></div>
+      <div class="card-hero">
+        <div class="team-badge">
+          <div class="team-icon">🚩</div>
+          <div>
+            <div class="team-name">깃발</div>
+          </div>
+        </div>
+        <div class="slogan-box">
+          <div class="slogan-label">팀 슬로건</div>
+          서로를 믿고 끝까지 완성하자
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section">
+        <div class="section-title">⚡ 우리 팀의 세 가지 약속</div>
+        <div class="promise-list">
+          <div class="promise-item"><span class="promise-num">1</span>서로의 의견 끝까지 듣기</div>
+          <div class="promise-item"><span class="promise-num">2</span>팀 활동에 적극적으로 참여하기</div>
+          <div class="promise-item"><span class="promise-num">3</span>연락 확인 늦지 않게 하기</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="people-section">
+        <br>
+        <div class="leader-card">
+          <div class="leader-avatar">👑</div>
+          <div class="leader-info">
+            <div class="role-tag">리더</div>
+            <div class="leader-name">주사랑</div>
+          </div>
+        </div>
+        <div class="members-title">👋 팀 멤버</div>
+        <div class="members-grid">
+          <span class="chip">강시현</span>
+          <span class="chip">김가현</span>
+          <span class="chip">송지후</span>
+          <span class="chip">신찬호</span>
+          <span class="chip">박지은</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL 3: 정화 ── -->
+  <div class="panel" id="panel-2">
+    <div class="card t3">
+      <div class="card-top"></div>
+      <div class="card-hero">
+        <div class="team-badge">
+          <div class="team-icon">✨</div>
+          <div>
+            <div class="team-name">정화</div>
+          </div>
+        </div>
+        <div class="slogan-box">
+          <div class="slogan-label">팀 슬로건</div>
+          아이디어가 디자인이 되는 순간
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section">
+        <div class="section-title">⚡ 우리 팀의 세 가지 약속</div>
+        <div class="promise-list">
+          <div class="promise-item"><span class="promise-num">1</span>결석 금지</div>
+          <div class="promise-item"><span class="promise-num">2</span>의견을 적극적으로 내고 소통 열심히 하기</div>
+          <div class="promise-item"><span class="promise-num">3</span>다른 사람의 의견에 화내지 않기</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="people-section">
+        <br>
+        <div class="leader-card">
+          <div class="leader-avatar">👑</div>
+          <div class="leader-info">
+            <div class="role-tag">리더</div>
+            <div class="leader-name">이다빈</div>
+          </div>
+        </div>
+        <div class="members-title">👋 팀 멤버</div>
+        <div class="members-grid">
+          <span class="chip">김수민</span>
+          <span class="chip">김아림</span>
+          <span class="chip">백지훈</span>
+          <span class="chip">성유경</span>
+          <span class="chip">이채원</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL 4: 두쫀쿠팀 ── -->
+  <div class="panel" id="panel-3">
+    <div class="card t4">
+      <div class="card-top"></div>
+      <div class="card-hero">
+        <div class="team-badge">
+          <div class="team-icon">🍡</div>
+          <div>
+            <div class="team-name">두쫀쿠팀</div>
+          </div>
+        </div>
+        <div class="slogan-box">
+          <div class="slogan-label">팀 슬로건</div>
+          맡은 일에 최선을 다하자
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section">
+        <div class="section-title">⚡ 우리 팀의 세 가지 약속</div>
+        <div class="promise-list">
+          <div class="promise-item"><span class="promise-num">1</span>사소한 일이라도 의견 얘기하기</div>
+          <div class="promise-item"><span class="promise-num">2</span>맡은 일 늦지 않게 보내기</div>
+          <div class="promise-item"><span class="promise-num">3</span>아침에 지각하지 않기</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="people-section">
+        <br>
+        <div class="leader-card">
+          <div class="leader-avatar">👑</div>
+          <div class="leader-info">
+            <div class="role-tag">리더</div>
+            <div class="leader-name">한채연</div>
+          </div>
+        </div>
+        <div class="members-title">👋 팀 멤버</div>
+        <div class="members-grid">
+          <span class="chip">이서아</span>
+          <span class="chip">권민주</span>
+          <span class="chip">신율</span>
+          <span class="chip">변동연</span>
+          <span class="chip">김태우</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL 5: 아자스 ── -->
+  <div class="panel" id="panel-4">
+    <div class="card t5">
+      <div class="card-top"></div>
+      <div class="card-hero">
+        <div class="team-badge">
+          <div class="team-icon">⚡</div>
+          <div>
+            <div class="team-name">아자스</div>
+          </div>
+        </div>
+        <div class="slogan-box">
+          <div class="slogan-label">팀 슬로건</div>
+          아자스팀 화이팅!
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section">
+        <div class="section-title">⚡ 우리 팀의 세 가지 약속</div>
+        <div class="promise-list">
+          <div class="promise-item"><span class="promise-num">1</span>화내지 않기</div>
+          <div class="promise-item"><span class="promise-num">2</span>참여하기</div>
+          <div class="promise-item"><span class="promise-num">3</span>싸우지 않기</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="people-section">
+        <br>
+        <div class="leader-card">
+          <div class="leader-avatar">👑</div>
+          <div class="leader-info">
+            <div class="role-tag">리더</div>
+            <div class="leader-name">함담희</div>
+          </div>
+        </div>
+        <div class="members-title">👋 팀 멤버</div>
+        <div class="members-grid">
+          <span class="chip">정유빈</span>
+          <span class="chip">홍나을</span>
+          <span class="chip">허유정</span>
+          <span class="chip">구민지</span>
+          <span class="chip">홍희주</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">팀빌딩 대시보드 · 디자인 방법론과 혁신 · 2026</div>
+</div>
+
+<script>
+  const teamClasses = ['t1','t2','t3','t4','t5'];
+  const tabs  = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.panel');
+
+  function switchTab(idx) {
+    tabs.forEach((t, i) => {
+      t.classList.toggle('active', i === idx);
+    });
+    panels.forEach((p, i) => {
+      p.classList.toggle('active', i === idx);
+    });
+  }
+</script>
+</body>
+</html>
